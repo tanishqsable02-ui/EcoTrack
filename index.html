@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#159447">
+<link rel="manifest" href="manifest.json">
+<title>EcoTrack</title>
+<style>
+:root{--g:#159447;--dark:#123d2a;--pale:#eef9f1;--card:#fff}
+*{box-sizing:border-box}body{margin:0;background:#eaf7ee;color:var(--dark);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+.app{max-width:480px;margin:auto;min-height:100vh;background:#fff;position:relative;padding-bottom:80px}
+.top{background:linear-gradient(145deg,#0f8c42,#38b765);color:white;padding:28px 22px 25px;border-radius:0 0 28px 28px}
+.logo{font-size:48px}.top h1{margin:2px 0;font-size:34px}.top p{margin:4px 0 0;opacity:.92}
+main{padding:18px}.screen{display:none}.screen.active{display:block}
+.card{background:var(--card);border-radius:20px;padding:18px;margin-bottom:15px;box-shadow:0 5px 18px #0b5d2a12;border:1px solid #e4f0e7}
+h2{margin:3px 0 14px}.muted{color:#688074}
+.btn{width:100%;border:0;border-radius:15px;padding:15px;background:var(--g);color:#fff;font-weight:800;font-size:16px;margin-top:10px}.btn.alt{background:#e8f5eb;color:#14733b}
+label{display:block;font-weight:700;margin:12px 0 6px}input,select{width:100%;padding:13px;border:1px solid #c8ded0;border-radius:12px;font-size:16px;background:white}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stat{background:var(--pale);padding:14px;border-radius:15px}.stat b{display:block;font-size:23px;margin-top:4px}
+.score{text-align:center;font-size:64px;font-weight:900;color:var(--g);line-height:1}.meter{height:12px;background:#e3eee6;border-radius:99px;overflow:hidden;margin:12px 0}.meter i{display:block;height:100%;background:var(--g);width:0}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(480px,100%);background:white;border-top:1px solid #dcebe0;display:flex;justify-content:space-around;padding:10px 5px calc(10px + env(safe-area-inset-bottom));z-index:5}.nav button{background:none;border:0;color:#688074;font-weight:700}.nav button.on{color:var(--g)}
+.history{font-size:14px}.history div{padding:11px 0;border-bottom:1px solid #e7efe9}
+.small{font-size:12px;color:#71857b;text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="logo">🌍🌱</div><h1>EcoTrack</h1><p>Travel smart. Plant more. Live greener.</p></header>
+
+<main>
+<section id="home" class="screen active">
+<div class="card"><h2>🌿 Your environmental journey</h2><p class="muted">Track your fuel use and trees planted, then get an easy-to-understand sustainability review.</p><button class="btn" onclick="show('track')">🚗 Start Tracking</button></div>
+<div class="grid">
+<div class="stat">🌳 Trees<b id="homeTrees">0</b></div>
+<div class="stat">🚗 Trips<b id="homeTrips">0</b></div>
+</div>
+</section>
+
+<section id="track" class="screen">
+<div class="card"><h2>🚗 Add your trip</h2>
+<label>Fuel type</label><select id="fuel"><option value="2.31">Petrol</option><option value="2.68">Diesel</option><option value="1.51">CNG</option></select>
+<label>Fuel used (litres)</label><input id="litres" type="number" min="0" step=".1" placeholder="e.g. 10">
+<label>🌳 Trees planted</label><input id="trees" type="number" min="0" step="1" placeholder="e.g. 2">
+<button class="btn" onclick="calculate()">Calculate Eco Review</button></div>
+<div class="card"><b>💡 Tip</b><p class="muted">You can enter the fuel used for one journey or a longer period. Keep the same method when comparing your results.</p></div>
+</section>
+
+<section id="result" class="screen">
+<div class="card"><h2>🌍 Your Eco Review</h2><div class="score" id="score">0</div><div style="text-align:center">Eco Score / 100</div><div class="meter"><i id="meter"></i></div>
+<div class="grid"><div class="stat">CO₂<b id="co2">0 kg</b></div><div class="stat">Trees<b id="treesOut">0</b></div></div>
+<p id="level" style="font-weight:800;margin-bottom:4px"></p><p class="muted" id="tip"></p>
+<button class="btn alt" onclick="show('track')">➕ Add Another Trip</button></div>
+<div class="small">CO₂ is an estimate using standard fuel emission factors. Tree benefits vary by species, age and location.</div>
+</section>
+
+<section id="history" class="screen">
+<div class="card"><h2>📊 My Progress</h2><div class="grid"><div class="stat">🌳 Trees<b id="sumTrees">0</b></div><div class="stat">🌍 CO₂<b id="sumCo2">0 kg</b></div></div></div>
+<div class="card"><h2>📝 Saved entries</h2><div id="entries" class="history">No entries yet.</div><button class="btn alt" onclick="clearData()">Clear history</button></div>
+</section>
+</main>
+
+<nav class="nav">
+<button id="nHome" class="on" onclick="show('home')">🏠<br>Home</button>
+<button id="nTrack" onclick="show('track')">🚗<br>Track</button>
+<button id="nHistory" onclick="show('history')">📊<br>Progress</button>
+</nav>
+</div>
+
+<script>
+const KEY='ecotrack-v1';
+let data=JSON.parse(localStorage.getItem(KEY)||'[]');
+function show(id){
+ document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('on'));
+ if(id==='home')nHome.classList.add('on'); if(id==='track'||id==='result')nTrack.classList.add('on'); if(id==='history')nHistory.classList.add('on');
+ refresh();
+}
+function calculate(){
+ const litres=+document.getElementById('litres').value||0, trees=Math.max(0,+document.getElementById('trees').value||0), factor=+document.getElementById('fuel').value;
+ if(litres<=0){alert('Please enter the fuel used.');return}
+ const co2=litres*factor;
+ const score=Math.max(0,Math.min(100,Math.round(75-Math.min(65,co2*1.1)+Math.min(35,trees*7))));
+ const fuelName=document.getElementById('fuel').selectedOptions[0].text;
+ data.push({date:new Date().toLocaleDateString(),fuel:fuelName,litres,trees,co2,score});
+ localStorage.setItem(KEY,JSON.stringify(data));
+ document.getElementById('score').textContent=score;document.getElementById('meter').style.width=score+'%';
+ document.getElementById('co2').textContent=co2.toFixed(1)+' kg';document.getElementById('treesOut').textContent=trees;
+ let level='Needs improvement',tip='Try carpooling, public transport, walking or cycling when practical.';
+ if(score>=80){level='🌟 Excellent';tip='Great effort! Keep reducing unnecessary fuel use and caring for planted trees.'}
+ else if(score>=60){level='👍 Good';tip='Good start! Look for a few journeys where you can use a lower-emission option.'}
+ document.getElementById('level').textContent=level;document.getElementById('tip').textContent=tip;
+ document.getElementById('litres').value='';document.getElementById('trees').value='';
+ show('result');
+}
+function refresh(){
+ const trees=data.reduce((a,x)=>a+x.trees,0),co2=data.reduce((a,x)=>a+x.co2,0);
+ homeTrees.textContent=trees;homeTrips.textContent=data.length;sumTrees.textContent=trees;sumCo2.textContent=co2.toFixed(1)+' kg';
+ entries.innerHTML=data.length?data.slice().reverse().map(x=>`<div><b>${x.date}</b> · ${x.fuel}<br>🚗 ${x.litres} L · 🌳 ${x.trees} · ${x.co2.toFixed(1)} kg CO₂ · Score ${x.score}</div>`).join(''):'No entries yet.';
+}
+function clearData(){if(confirm('Clear all saved entries?')){data=[];localStorage.removeItem(KEY);refresh()}}
+refresh();
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}</script></body>
+</html>
