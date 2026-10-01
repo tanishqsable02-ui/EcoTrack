@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EcoGame — EcoTrack</title>
+<style>
+:root{--green:#159447;--dark:#123d2a;--sky:#dff7ff;--card:#fff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(#b9edff,#effff1);color:var(--dark);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:16px}.wrap{width:min(760px,100%);background:var(--card);border-radius:24px;padding:20px;box-shadow:0 12px 35px #126b3525}h1{margin:0 0 4px;color:var(--green)}p{margin:6px 0 14px;color:#527164}.hud{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#eef9f1;border-radius:14px;padding:10px 14px;font-weight:800}.game{position:relative;margin-top:14px;border-radius:16px;overflow:hidden;background:var(--sky)}canvas{display:block;width:100%;height:auto}.controls{display:flex;gap:10px;justify-content:center;margin-top:14px}.btn{border:0;border-radius:12px;padding:12px 22px;background:var(--green);color:#fff;font-size:16px;font-weight:800;cursor:pointer}.btn:active{transform:translateY(1px)}.hint{text-align:center;font-size:13px;color:#688074;margin:12px 0 0}@media(max-width:500px){.wrap{padding:14px}.hud{font-size:14px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>🌱 EcoGame: Green Runner</h1>
+<p>Help the runner collect trees and avoid pollution. Every tree makes the planet greener!</p>
+<div class="hud"><span>🌳 Trees: <b id="trees">0</b></span><span>⭐ Score: <b id="score">0</b></span><span>🏆 Best: <b id="best">0</b></span></div>
+<div class="game"><canvas id="game" width="720" height="360" aria-label="Green Runner game"></canvas></div>
+<div class="controls"><button class="btn" id="jump">Jump</button><button class="btn" id="restart">Restart</button></div>
+<p class="hint">Press SPACE, ↑, or tap Jump to leap over pollution. Collect 🌳 and 🍃 items.</p>
+</main>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+let player,items,obstacles,score,trees,speed,playing,over,last,spawn;
+const bestKey='ecogame-best'; document.getElementById('best').textContent=localStorage.getItem(bestKey)||0;
+function reset(){player={x:90,y:270,w:34,h:58,vy:0,onGround:true,frame:0};items=[];obstacles=[];score=0;trees=0;speed=4;playing=true;over=false;last=0;spawn=0;updateHud();requestAnimationFrame(loop)}
+function updateHud(){document.getElementById('score').textContent=score;document.getElementById('trees').textContent=trees}
+function jump(){if(over){reset();return}if(player.onGround){player.vy=-12;player.onGround=false}}
+function addObjects(dt){spawn-=dt;if(spawn<=0){const good=Math.random()>.36;if(good)items.push({x:W+20,y:190+Math.random()*65,r:15,type:Math.random()>.5?'tree':'leaf'});else obstacles.push({x:W+20,y:300,w:30,h:30,type:'smoke'});spawn=650+Math.random()*700}}
+function hit(a,b){return a.x<a.x+a.w&&a.x+a.w>b.x&&a.y<a.y+a.h&&a.y+a.h>b.y}
+function update(dt){speed+=dt*.00025;player.vy+=.58;player.y+=player.vy;player.frame+=dt*.02;if(player.y>=270){player.y=270;player.vy=0;player.onGround=true}addObjects(dt);items.forEach(x=>x.x-=speed);obstacles.forEach(x=>x.x-=speed);for(let i=items.length-1;i>=0;i--){const x=items[i],box={x:x.x-15,y:x.y-15,w:30,h:30};if(hit(player,box)){if(x.type==='tree')trees++;score+=x.type==='tree'?10:5;items.splice(i,1);updateHud()}}for(const x of obstacles){if(hit(player,x)){playing=false;over=true;const best=Math.max(score,+localStorage.getItem(bestKey)||0);localStorage.setItem(bestKey,best);document.getElementById('best').textContent=best}}
+items=items.filter(x=>x.x>-40);obstacles=obstacles.filter(x=>x.x>-50)}
+function draw(){ctx.clearRect(0,0,W,H);const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#9fe7ff');sky.addColorStop(1,'#f5fff0');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff8';ctx.beginPath();ctx.arc(600,70,34,0,7);ctx.fill();ctx.fillStyle='#6acb62';ctx.fillRect(0,328,W,32);ctx.fillStyle='#3aa64a';for(let x=0;x<W;x+=34){ctx.beginPath();ctx.arc(x,328,22,Math.PI,0);ctx.fill()}for(const x of items){ctx.font='28px sans-serif';ctx.fillText(x.type==='tree'?'🌳':'🍃',x.x-15,x.y+10)}for(const x of obstacles){ctx.font='30px sans-serif';ctx.fillText('🏭',x.x-3,x.y+28)}drawRunner();if(over){ctx.fillStyle='#123d2acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 34px system-ui';ctx.fillText('Pollution got you!',W/2,145);ctx.font='20px system-ui';ctx.fillText('Score: '+score+'  •  Trees: '+trees,W/2,185);ctx.font='16px system-ui';ctx.fillText('Press Jump or Restart to try again',W/2,220);ctx.textAlign='start'}}
+function drawRunner(){const p=player,bob=p.onGround?Math.sin(p.frame)*2:0,x=p.x,y=p.y+bob;ctx.strokeStyle='#123d2a';ctx.lineWidth=6;ctx.lineCap='round';ctx.beginPath();ctx.arc(x+17,y+12,11,0,7);ctx.stroke();ctx.beginPath();ctx.moveTo(x+17,y+24);ctx.lineTo(x+17,y+43);ctx.lineTo(x+5+(p.onGround?Math.sin(p.frame)*7:0),y+57);ctx.moveTo(x+17,y+43);ctx.lineTo(x+30-(p.onGround?Math.sin(p.frame)*7:0),y+57);ctx.moveTo(x+17,y+29);ctx.lineTo(x+3,y+39);ctx.moveTo(x+17,y+29);ctx.lineTo(x+31,y+21);ctx.stroke();ctx.fillStyle='#159447';ctx.fillRect(x+8,y+22,18,20)}
+function loop(t){if(!last)last=t;const dt=Math.min(40,t-last);last=t;if(playing)update(dt);draw();if(playing)requestAnimationFrame(loop)}
+document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jump()}});document.getElementById('jump').onclick=jump;document.getElementById('restart').onclick=reset;reset();
+</script>
+</body>
+</html>
