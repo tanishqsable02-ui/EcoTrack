@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#159447">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="manifest" href="manifest.json">
-<title>EcoTrack</title>
+<title>EcoTrack - Play EcoGame Now!</title>
 <style>
 :root{--g:#159447;--dark:#123d2a;--pale:#eef9f1;--card:#fff}
 *{box-sizing:border-box}body{margin:0;background:#eaf7ee;color:var(--dark);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
@@ -25,9 +28,10 @@ label{display:block;font-weight:700;margin:12px 0 6px}input,select{width:100%;pa
 .history{font-size:14px}.history div{padding:11px 0;border-bottom:1px solid #e7efe9}
 .small{font-size:12px;color:#71857b;text-align:center}
 .game-embed{background:#dff7ff;border-radius:15px;padding:0;margin:15px 0;border:2px solid #9fe7ff;overflow:hidden}
-.game-embed canvas{width:100%;height:auto;display:block;max-height:400px}
+#gameCanvas{width:100%;height:auto;display:block;max-height:400px;background:#dff7ff}
 .game-controls{display:flex;gap:10px;justify-content:center;padding:15px;background:#eef9f1;border-radius:0 0 15px 15px}
-.game-btn{flex:1;border:0;border-radius:12px;padding:12px;background:var(--g);color:#fff;font-weight:800;cursor:pointer;font-size:14px}
+.game-btn{flex:1;border:0;border-radius:12px;padding:12px;background:var(--g);color:#fff;font-weight:800;cursor:pointer;font-size:14px;transition:all 0.2s}
+.game-btn:active{transform:scale(0.95)}
 .game-hint{text-align:center;font-size:12px;color:#688074;padding:10px;background:#eef9f1;border-radius:12px;margin-top:10px}
 .game-hud{display:flex;justify-content:space-around;gap:10px;background:#eef9f1;border-radius:12px;padding:10px;margin-bottom:10px;font-weight:700;font-size:14px}
 </style>
@@ -97,15 +101,14 @@ label{display:block;font-weight:700;margin:12px 0 6px}input,select{width:100%;pa
 const KEY='ecotrack-v1';
 let data=JSON.parse(localStorage.getItem(KEY)||'[]');
 
-// Track App Functions
 function show(id){
  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
  document.getElementById(id).classList.add('active');
  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('on'));
- if(id==='home')nHome.classList.add('on'); 
- if(id==='track'||id==='result')nTrack.classList.add('on'); 
- if(id==='history')nHistory.classList.add('on');
- if(id==='ecogame'){nGame.classList.add('on');gameInit();}
+ if(id==='home')document.getElementById('nHome').classList.add('on'); 
+ if(id==='track'||id==='result')document.getElementById('nTrack').classList.add('on'); 
+ if(id==='history')document.getElementById('nHistory').classList.add('on');
+ if(id==='ecogame'){document.getElementById('nGame').classList.add('on');gameInit();}
  refresh();
 }
 
@@ -129,14 +132,17 @@ function calculate(){
 
 function refresh(){
  const trees=data.reduce((a,x)=>a+x.trees,0),co2=data.reduce((a,x)=>a+x.co2,0);
- homeTrees.textContent=trees;homeTrips.textContent=data.length;sumTrees.textContent=trees;sumCo2.textContent=co2.toFixed(1)+' kg';
- entries.innerHTML=data.length?data.slice().reverse().map(x=>`<div><b>${x.date}</b> · ${x.fuel}<br>🚗 ${x.litres} L · 🌳 ${x.trees} · ${x.co2.toFixed(1)} kg CO₂ · Score ${x.score}</div>`).join(''):entries.innerHTML;
+ document.getElementById('homeTrees').textContent=trees;
+ document.getElementById('homeTrips').textContent=data.length;
+ document.getElementById('sumTrees').textContent=trees;
+ document.getElementById('sumCo2').textContent=co2.toFixed(1)+' kg';
+ const entriesDiv=document.getElementById('entries');
+ entriesDiv.innerHTML=data.length?data.slice().reverse().map(x=>`<div><b>${x.date}</b> · ${x.fuel}<br>🚗 ${x.litres} L · 🌳 ${x.trees} · ${x.co2.toFixed(1)} kg CO₂ · Score ${x.score}</div>`).join(''):'No entries yet.';
 }
 
 function clearData(){if(confirm('Clear all saved entries?')){data=[];localStorage.removeItem(KEY);refresh()}}
 
-// EcoGame Functions
-const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d'),W=720,H=360;
 let player,items,obstacles,score,trees,speed,playing,over,last,spawn,gameActive=false;
 const bestKey='ecogame-best';
 
@@ -187,11 +193,9 @@ function updateGame(dt){
  player.y+=player.vy;
  player.frame+=dt*.02;
  if(player.y>=270){player.y=270;player.vy=0;player.onGround=true}
- 
  addObjectsGame(dt);
  items.forEach(x=>x.x-=speed);
  obstacles.forEach(x=>x.x-=speed);
- 
  for(let i=items.length-1;i>=0;i--){
   const x=items[i],box={x:x.x-15,y:x.y-15,w:30,h:30};
   if(hitTest(player,box)){
@@ -201,7 +205,6 @@ function updateGame(dt){
    updateGameHud();
   }
  }
- 
  for(const x of obstacles){
   if(hitTest(player,x)){
    playing=false;
@@ -212,7 +215,6 @@ function updateGame(dt){
    updateGameHud();
   }
  }
- 
  items=items.filter(x=>x.x>-40);
  obstacles=obstacles.filter(x=>x.x>-50);
 }
@@ -224,12 +226,10 @@ function drawGame(){
  sky.addColorStop(1,'#f5fff0');
  ctx.fillStyle=sky;
  ctx.fillRect(0,0,W,H);
- 
  ctx.fillStyle='#fff8';
  ctx.beginPath();
  ctx.arc(600,70,34,0,7);
  ctx.fill();
- 
  ctx.fillStyle='#6acb62';
  ctx.fillRect(0,328,W,32);
  ctx.fillStyle='#3aa64a';
@@ -238,19 +238,15 @@ function drawGame(){
   ctx.arc(x,328,22,Math.PI,0);
   ctx.fill();
  }
- 
  for(const x of items){
   ctx.font='28px sans-serif';
   ctx.fillText(x.type==='tree'?'🌳':'🍂',x.x-15,x.y+10);
  }
- 
  for(const x of obstacles){
   ctx.font='30px sans-serif';
   ctx.fillText('🏭',x.x-3,x.y+28);
  }
- 
  drawRunner();
- 
  if(over){
   ctx.fillStyle='#123d2acc';
   ctx.fillRect(0,0,W,H);
@@ -271,11 +267,9 @@ function drawRunner(){
  ctx.strokeStyle='#123d2a';
  ctx.lineWidth=6;
  ctx.lineCap='round';
- 
  ctx.beginPath();
  ctx.arc(x+17,y+12,11,0,7);
  ctx.stroke();
- 
  ctx.beginPath();
  ctx.moveTo(x+17,y+24);
  ctx.lineTo(x+17,y+43);
@@ -287,7 +281,6 @@ function drawRunner(){
  ctx.moveTo(x+17,y+29);
  ctx.lineTo(x+31,y+21);
  ctx.stroke();
- 
  ctx.fillStyle='#159447';
  ctx.fillRect(x+8,y+22,18,20);
 }
