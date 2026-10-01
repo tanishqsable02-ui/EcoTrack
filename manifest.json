@@ -1,23 +1,13 @@
 {
-  "name": "EcoTrack",
+  "name": "EcoTrack — Travel Smart, Play EcoGame",
   "short_name": "EcoTrack",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#159447",
-  "description": "Track travel fuel use and tree planting efforts.",
+  "description": "Track distance, fuel, electricity, emissions and trees, then play EcoGame.",
   "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
   ]
 }
